@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Tank Battle Game</title>
+    <style>
+      canvas {
+        border: 1px solid black;
+      }
+    </style>
+  </head>
+
+  <body>
+    <canvas id="gameCanvas" width="600" height="400"></canvas>
+
+    <script>
+      const canvas = document.getElementById("gameCanvas");
+      const ctx = canvas.getContext("2d");
+
+      const PLAYER1_COLOR = "blue";
+      const PLAYER2_COLOR = "red";
+      const PROJECTILE1_COLOR = "blue";
+      const PROJECTILE2_COLOR = "red";
+
+      const player1 = {
+        x: canvas.width / 4,
+        y: canvas.height / 2,
+        width: 30,
+        height: 30,
+        moveUp: false,
+        moveDown: false,
+        moveLeft: false,
+        moveRight: false,
+        speed: 5,
+        score: 0,
+      };
+
+      const player2 = {
+        x: (canvas.width * 3) / 4,
+        y: canvas.height / 2,
+        width: 30,
+        height: 30,
+        moveUp: false,
+        moveDown: false,
+        moveLeft: false,
+        moveRight: false,
+        speed: 5,
+        score: 0,
+      };
+
+      const projectiles1 = [];
+      const projectiles2 = [];
+
+      function clearCanvas() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+
+      function drawPlayer(player, color) {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(player.x, player.y);
+        ctx.lineTo(player.x + player.width / 2, player.y - player.height / 2);
+        ctx.lineTo(player.x + player.width, player.y);
+        ctx.lineTo(player.x + player.width / 2, player.y + player.height / 2);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      function updatePlayer(player) {
+        if (player.moveUp && player.y > 0) {
+          player.y -= player.speed;
+        }
+        if (player.moveDown && player.y < canvas.height - player.height) {
+          player.y += player.speed;
+        }
+        if (player.moveLeft && player.x > 0) {
+          player.x -= player.speed;
+        }
+        if (player.moveRight && player.x < canvas.width - player.width) {
+          player.x += player.speed;
+        }
+      }
+
+      function shootProjectile(player, projectiles) {
+        const projectile = {
+          x: player.x + player.width / 2,
+          y: player.y,
+          radius: 5,
+          color: player === player1 ? PROJECTILE1_COLOR : PROJECTILE2_COLOR,
+          speedX: player === player1 ? 5 : -5,
+        };
+        projectiles.push(projectile);
+      }
+
+      function updateProjectiles(projectiles) {
+        for (let i = projectiles.length - 1; i >= 0; i--) {
+          const projectile = projectiles[i];
+          projectile.x += projectile.speedX;
+          if (projectile.x < 0 || projectile.x > canvas.width) {
+            projectiles.splice(i, 1);
+          }
+        }
+      }
+
+      function drawProjectiles(projectiles, color) {
+        ctx.fillStyle = color;
+        for (let i = 0; i < projectiles.length; i++) {
+          const projectile = projectiles[i];
+          ctx.beginPath();
+          ctx.arc(
+            projectile.x,
+            projectile.y,
+            projectile.radius,
+            0,
+            Math.PI * 2,
+            true
+          );
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
+      function checkCollision(player, projectiles, opponent) {
+        for (let i = projectiles.length - 1; i >= 0; i--) {
+          const projectile = projectiles[i];
+          const dx = player.x + player.width / 2 - projectile.x;
+          const dy = player.y + player.height / 2 - projectile.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          if (distance < player.width / 2 + projectile.radius) {
+            projectiles.splice(i, 1);
+            opponent.score++;
+          }
+        }
+      }
+
+      function drawScore(player, color, margin = 0) {
+        ctx.fillStyle = color;
+        ctx.font = "16px Arial";
+        ctx.fillText(`Score: ${player.score}`, 10 + margin, 20);
+      }
+
+      function gameLoop() {
+        clearCanvas();
+
+        updatePlayer(player1);
+        updatePlayer(player2);
+
+        updateProjectiles(projectiles1);
+        updateProjectiles(projectiles2);
+
+        checkCollision(player1, projectiles2, player2);
+        checkCollision(player2, projectiles1, player1);
+
+        drawPlayer(player1, PLAYER1_COLOR);
+        drawPlayer(player2, PLAYER2_COLOR);
+
+        drawProjectiles(projectiles1, PROJECTILE1_COLOR);
+        drawProjectiles(projectiles2, PROJECTILE2_COLOR);
+
+        drawScore(player1, PLAYER1_COLOR);
+        drawScore(player2, PLAYER2_COLOR, canvas.width / 2);
+
+        requestAnimationFrame(gameLoop);
+      }
+
+      function keyDownHandler(event) {
+        if (event.key === "z") {
+          player1.moveUp = true;
+        } else if (event.key === "s") {
+          player1.moveDown = true;
+        } else if (event.key === "q") {
+          player1.moveLeft = true;
+        } else if (event.key === "d") {
+          player1.moveRight = true;
+        } else if (event.key === " ") {
+          shootProjectile(player1, projectiles1);
+        }
+
+        if (event.key === "ArrowUp") {
+          player2.moveUp = true;
+        } else if (event.key === "ArrowDown") {
+          player2.moveDown = true;
+        } else if (event.key === "ArrowLeft") {
+          player2.moveLeft = true;
+        } else if (event.key === "ArrowRight") {
+          player2.moveRight = true;
+        } else if (event.key === "Enter") {
+          shootProjectile(player2, projectiles2);
+        }
+      }
+
+      function keyUpHandler(event) {
+        if (event.key === "z") {
+          player1.moveUp = false;
+        } else if (event.key === "s") {
+          player1.moveDown = false;
+        } else if (event.key === "q") {
+          player1.moveLeft = false;
+        } else if (event.key === "d") {
+          player1.moveRight = false;
+        }
+
+        if (event.key === "ArrowUp") {
+          player2.moveUp = false;
+        } else if (event.key === "ArrowDown") {
+          player2.moveDown = false;
+        } else if (event.key === "ArrowLeft") {
+          player2.moveLeft = false;
+        } else if (event.key === "ArrowRight") {
+          player2.moveRight = false;
+        }
+      }
+
+      document.addEventListener("keydown", keyDownHandler);
+      document.addEventListener("keyup", keyUpHandler);
+
+      gameLoop();
+    </script>
+  </body>
+</html>
